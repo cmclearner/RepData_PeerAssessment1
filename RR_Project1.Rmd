@@ -1,0 +1,118 @@
+---
+title: "Project 1 (Reproducible Research)"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(knitr)
+library(dplyr)
+library(ggplot2)
+
+## setting up workind directory.
+
+
+setwd('C:/Users/choimyon/Box Sync/Clara/Prof Develp/Coursera/Reproducible/W2')
+
+
+## bringing data to Rstudio.
+
+```{r}
+data <- read.csv("activity.csv")
+```
+
+## **What is mean total number of steps taken per day?**
+
+```{r}
+## dropping missing values in 'steps' column.
+## calculating the total number of steps taken per day with grouping data by date.
+
+
+actdata <- data %>%
+	filter(!is.na(steps)) %>%
+	group_by(date) %>%
+	summarise(totstepaday=sum(steps))
+
+
+## make a histogram of the total number of steps taken per day
+
+```{r}
+hist(actdata$totstepaday, main="Historgram of total number steps taken per day",
+  xlab="Total number of steps per day")
+
+
+## calculate and report the mean and median of the total number 
+## of steps taken per day
+
+summary(actdata)
+
+## make a time series plot of a 5-minute interval (x) and the average number
+## of steps taken, averaged across all days (y)
+
+actdata_int <- aggregate(steps~interval, data, mean)
+
+with(actdata_int, plot(steps~interval, type = "l", main="Average number of steps taken over all days",
+ylab="Average number of steps"))
+
+## Which 5-minute interval, on average across all the days in the dataset,
+## contains the maximum number of steps?
+
+actdata_int[which.max(actdata_int$steps),]
+```
+
+
+## **Imputing missing values**
+
+```{r}
+## total number of missing values in the dataset
+
+sum(is.na(data))
+
+
+## replace NA values for steps and interval with their column mean
+
+data$steps[is.na(data$steps)] <- round(mean(data$steps, na.rm=TRUE))
+data$interval[is.na(data$interval)] <- round(mean(data$interval, na.rm=TRUE))
+
+head(data)
+
+## make a histogram of the total number of steps taken each day with missing-value-imputed dataset.
+
+actdata_fillin <- data %>%
+	group_by(date) %>%
+	summarise(totstepday=sum(steps))
+
+hist(actdata_fillin$totstepday, main="Total number of steps taken per day (imputed dataset)",
+xlab="Total number of steps per day")
+	
+## getting mean and median values of total number of steps taken per day with the fill-in dataset
+
+summary(actdata_fillin)
+
+## There are differences for mean and median values between missing-value-removed dataset and 
+## missing-value-imputed one. Both mean and median values for mv-removed dataset is higher by 14 and 109
+## respectively compared to the ones of the mv-treated dataset.
+```
+
+
+## **Are there differences in activity patterns between weekdays and weekends?**
+
+```{r}
+## create weekday variable indicating whether a given date is a weekday or weekend day.
+
+data$weekday <- ifelse(weekdays(as.Date(actdata_fillin$date)) %in%
+c("Saturday", "Sunday"), "weekend", "weekday")
+
+## Create a panel plot conting a timeseries of the 5-minute interval (x) and the average number of
+## steps taken, averaged acorss all weekday days and weekend days (y).
+
+data_wk <- aggregate(steps~interval + weekday, data, mean)
+
+qplot(interval, steps, 
+      data = data_wk,
+      geom=c("line"),
+      ylab = "Number of steps") +
+ 	facet_wrap(~ weekday, ncol = 1)
